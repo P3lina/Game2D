@@ -1,11 +1,28 @@
-﻿using System.Collections;
+﻿using CodeMonkey.Utils;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerMoveScript : MonoBehaviour
 {
+
+    /*
+     * TODOS
+     * 
+     * Überarbeitung der onGround-Methode?, da auch teilweise, wenn sich der Charakter schon in der Luft befindet trotzdem ein normaler Jump ausgeführt wird
+     * Charakter sollte schneller sein
+    */
+
+
     [SerializeField] private LayerMask platformLayerMask;
     public Animator animator;
+    public GameObject bone1;
+    public GameObject rocketlauncher;
+    public GameObject rocketlauncherCollection;
+    public GameObject emptyrocketlauncher;
+    public GameObject rocketlauncherrocket;
+    public GameObject rocketlauncherrocket_fire;
+    public GameObject rocketlauncherfire;
     private float maxSpeed = 10;
     private Rigidbody2D rb;
     private BoxCollider2D bc;
@@ -79,7 +96,8 @@ public class PlayerMoveScript : MonoBehaviour
                 rb.velocity = new Vector2(getSpeed(), rb.velocity.y);
                 animator.speed = getSpeed()/5;
             }
-            
+            rocketlauncher.transform.rotation = Quaternion.Euler(0, 180, 0);
+            rocketlauncherCollection.transform.rotation = Quaternion.Euler(0, 180, 0);
         }
         if (getSpeed() > 0 && getWalkingLeft()==false)
         {
@@ -95,7 +113,8 @@ public class PlayerMoveScript : MonoBehaviour
                 rb.velocity = new Vector2(-getSpeed(), rb.velocity.y);
                 animator.speed = getSpeed()/5;
             }
-
+            rocketlauncher.transform.rotation = Quaternion.Euler(0, 0, 0);
+            rocketlauncherCollection.transform.rotation = Quaternion.Euler(0, 0, 0);
         }
         if (getSpeed() > 0 && getWalkingLeft()==true)
         {
@@ -136,7 +155,43 @@ public class PlayerMoveScript : MonoBehaviour
                 StartCoroutine(jumpDelayed());
             }
         }
+        #region alle Rocketlauncherinzanzen zum Mauszeiger drehen
+        Vector3 mousePos = UtilsClass.GetMouseWorldPosition();
+        Vector3 direction = (mousePos - rocketlauncherCollection.transform.position).normalized;
+        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+        if(rocketlauncher.active)
+            rocketlauncher.transform.eulerAngles = new Vector3(0, 0, angle - 180);
+        if(rocketlauncherCollection.active)
+            rocketlauncherCollection.transform.eulerAngles = new Vector3(0, 0, angle - 180);
+            
+        #endregion
+        if (Input.GetKeyDown(KeyCode.Mouse0))
+        {
+            rocketlauncherrocket_fire.transform.eulerAngles = new Vector3(0, 0, angle - 180);
+            rocketlauncher.SetActive(false);
+            rocketlauncherCollection.SetActive(true);
+            rocketlauncherrocket.SetActive(false);
+            rocketlauncherrocket_fire.SetActive(true);
+            rocketlauncherrocket_fire.transform.position = rocketlauncherrocket.transform.position;
+            rocketlauncherrocket_fire.transform.rotation = rocketlauncherrocket.transform.rotation;
+            Vector3 mousePosition = UtilsClass.GetMouseWorldPosition();
+            rocketlauncherrocket_fire.GetComponent<Rigidbody2D>().velocity = (mousePosition - rocketlauncherrocket.transform.position).normalized;
+            StartCoroutine(accelerateShot());
+        }
     }
+
+
+    IEnumerator accelerateShot()
+    {
+        if (rocketlauncherrocket_fire.active && rocketlauncherrocket_fire.GetComponent<Rigidbody2D>().velocity.magnitude<80)
+        {
+            rocketlauncherrocket_fire.GetComponent<Rigidbody2D>().velocity = rocketlauncherrocket_fire.GetComponent<Rigidbody2D>().velocity * 2f;
+            yield return new WaitForSeconds(0.1f);
+            StartCoroutine(accelerateShot());
+        }
+    }
+
+
     IEnumerator jumpDelayed()
     {
         yield return new WaitForSeconds(0.14f);
@@ -151,4 +206,5 @@ public class PlayerMoveScript : MonoBehaviour
             doubleJumped = false;
         return rh.collider!=null;
     }
+
 }
